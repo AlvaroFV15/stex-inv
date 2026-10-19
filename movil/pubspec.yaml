@@ -1,0 +1,32 @@
+name: stex_inv_movil
+description: App móvil offline-first de STEX-INV (APJL Textil) para auditorías e inventarios físicos.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2
+  supabase_flutter: ^2.18.0
+  dio: ^5.7.0
+  sqflite_sqlcipher: ^3.1.0
+  path: ^1.9.0
+  flutter_secure_storage: ^9.2.2
+  connectivity_plus: ^6.1.0
+  uuid: ^4.5.1
+  crypto: ^3.0.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  # Base SQLite en memoria para pruebas (en la PC o en Docker, sin dispositivo).
+  sqflite_common_ffi: ^2.3.4
+
+flutter:
+  uses-material-design: true

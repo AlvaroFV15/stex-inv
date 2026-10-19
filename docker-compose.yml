@@ -1,0 +1,102 @@
+# =====================================================================
+# STEX-INV · entorno local de desarrollo y pruebas
+#
+#   docker compose up -d                     → base de datos + API (puerto 8080)
+#   docker compose --profile test run --rm api-tests          → pruebas del servidor
+#   docker compose --profile test run --rm movil-test         → analyze + unit + widgets
+#   docker compose --profile test run --rm movil-integracion  → app ↔ servidor
+#   docker compose down -v                   → apagar y borrar datos
+#
+# O simplemente:  make test   (ver Makefile)
+# =====================================================================
+name: stex-inv
+
+x-db-url: &db-url postgres://stex:stex@db:5432/stex
+x-jwt: &jwt ${JWT_SECRET:-stex-local-jwt-secret-solo-para-pruebas-0123456789}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: stex
+      POSTGRES_PASSWORD: stex
+      POSTGRES_DB: stex
+    volumes:
+      # Se ejecutan en orden alfabético solo la primera vez (volumen vacío).
+      - ./backend/db/00_compat_supabase.sql:/docker-entrypoint-initdb.d/00_compat_supabase.sql:ro
+      - ./backend/db/01_esquema_stex.sql:/docker-entrypoint-initdb.d/01_esquema_stex.sql:ro
+      # La MISMA migración que se aplica en Supabase producción.
+      - ./backend/parche-panel/supabase/migrations/20261018_sync_movil.sql:/docker-entrypoint-initdb.d/02_sync_movil.sql:ro
+      - ./backend/db/03_semilla.sql:/docker-entrypoint-initdb.d/03_semilla.sql:ro
+      - datos-db:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stex -d stex"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: servidor-local/Dockerfile
+      target: runtime
+    environment:
+      DATABASE_URL: *db-url
+      JWT_SECRET: *jwt
+      ANON_KEY: local-anon-key
+      PORT: "8080"
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ------------------------------------------------------------- pruebas
+  api-tests:
+    profiles: [test]
+    build:
+      context: ./backend
+      dockerfile: servidor-local/Dockerfile
+      target: test
+    environment:
+      DATABASE_URL: *db-url
+      JWT_SECRET: *jwt
+      STEX_API_URL: http://api:8080
+    volumes:
+      - ./reportes/servidor:/app/servidor-local/reportes
+    depends_on:
+      api:
+        condition: service_healthy
+
+  movil-test:
+    profiles: [test]
+    build:
+      context: ./movil
+      target: base
+      args:
+        FLUTTER_VERSION: ${FLUTTER_VERSION:-3.44.9}
+    command: ["bash", "tool/ci.sh", "unit"]
+    volumes:
+      - ./reportes/movil:/app/reportes
+
+  movil-integracion:
+    profiles: [test]
+    build:
+      context: ./movil
+      target: base
+      args:
+        FLUTTER_VERSION: ${FLUTTER_VERSION:-3.44.9}
+    command: ["bash", "tool/ci.sh", "integracion"]
+    environment:
+      STEX_API_URL: http://api:8080
+    volumes:
+      - ./reportes/movil:/app/reportes
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  datos-db:

@@ -1,0 +1,6 @@
+# Etiquetas de pruebas.
+#   flutter test --exclude-tags integration   → unitarias + widgets (sin red)
+#   flutter test --tags integration           → contra el servidor local (Docker)
+tags:
+  integration:
+    timeout: 2x

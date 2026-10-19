@@ -1,0 +1,26 @@
+{
+  "name": "stex-servidor-local",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Servidor local de pruebas: Auth compatible con Supabase + /api/sync del panel STEX-INV",
+  "main": "dist/servidor-local/src/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/servidor-local/src/main.js",
+    "test:unit": "node --test --test-reporter=spec --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=reportes/junit-unit.xml \"dist/servidor-local/test/unit/**/*.test.js\"",
+    "test:integracion": "node --test --test-concurrency=1 --test-reporter=spec --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=reportes/junit-integracion.xml \"dist/servidor-local/test/integracion/**/*.test.js\"",
+    "test": "npm run build && npm run test:unit && npm run test:integracion",
+    "test:cobertura": "npm run build && node --test --test-concurrency=1 --experimental-test-coverage --test-coverage-include=\"dist/**/src/**\" --test-coverage-include=\"dist/parche-panel/**\" --test-reporter=spec --test-reporter=lcov --test-reporter-destination=stdout --test-reporter-destination=reportes/lcov-servidor.info \"dist/servidor-local/test/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/pg": "8.23.1",
+    "typescript": "5.9.3"
+  }
+}

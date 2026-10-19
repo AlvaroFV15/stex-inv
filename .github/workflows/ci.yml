@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  servidor:
+    name: Servidor (unitarias + integración con PostgreSQL)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Levantar base de datos y API
+        run: docker compose up -d --build --wait db api
+      - name: Pruebas del servidor
+        run: docker compose --profile test run --rm --build api-tests
+      - name: Logs si falla
+        if: failure()
+        run: docker compose logs api db
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reportes-servidor
+          path: reportes/servidor
+
+  movil:
+    name: App (analyze + unitarias + widgets + integración)
+    runs-on: ubuntu-latest
+    needs: servidor
+    steps:
+      - uses: actions/checkout@v4
+      - name: Levantar base de datos y API
+        run: docker compose up -d --build --wait db api
+      - name: Analyze + unitarias + widgets
+        run: docker compose --profile test run --rm --build movil-test
+      - name: Integración app ↔ servidor
+        run: docker compose --profile test run --rm movil-integracion
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reportes-movil
+          path: reportes/movil
+
+  apk:
+    name: APK debug
+    runs-on: ubuntu-latest
+    needs: movil
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --target apk --output type=local,dest=dist movil
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk-debug
+          path: dist/*.apk
